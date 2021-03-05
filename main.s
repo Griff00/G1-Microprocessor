@@ -1,8 +1,9 @@
 #include <xc.inc>
 
 extrn	UART_Setup, UART_Transmit_Message  ; external uart subroutines
-extrn	LCD_Setup, LCD_Write_Message, LCD_Write_Hex ; external LCD subroutines
+extrn	LCD_Setup, LCD_Write_Message, LCD_Write_Hex, LCD_clear, LCD_Long_delay ; external LCD subroutines
 extrn	ADC_Setup, ADC_Read		   ; external ADC subroutines
+extrn	HEXTODEC_input_high, HEXTODEC_input_low, HEXTODEC_convert, D_h, D_l 
 	
 psect	udata_acs   ; reserve data space in access ram
 counter:    ds 1    ; reserve one byte for a counter variable
@@ -14,14 +15,17 @@ myArray:    ds 0x80 ; reserve 128 bytes for message data
 psect	data    
 	; ******* myTable, data in programme memory, and its length *****
 myTable:
-	db	'H','e','l','l','o',' ','W','o','r','l','d','!',0x0a
+	db	'm','V',0x0a
 					; message, plus carriage return
-	myTable_l   EQU	13	; length of data
+	myTable_l   EQU	3	; length of data
 	align	2
     
 psect	code, abs	
 rst: 	org 0x0
- 	goto	setup
+ 	;goto	setup
+	goto	setup
+
+	
 
 	; ******* Programme FLASH read Setup Code ***********************
 setup:	bcf	CFGS	; point to Flash program memory  
@@ -30,6 +34,27 @@ setup:	bcf	CFGS	; point to Flash program memory
 	call	LCD_Setup	; setup UART
 	call	ADC_Setup	; setup ADC
 	goto	start
+	
+	
+;c_test:
+	;movlw	0xd2
+	;call	HEXTODEC_input_low
+	;movlw	0x04
+	;call	HEXTODEC_input_high
+	
+	;call	HEXTODEC_convert
+	;movf	D_h, W, A
+	;call	LCD_Write_Hex
+	;movf	D_l, W, A
+	;call	LCD_Write_Hex
+	
+	;movlw	myTable_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
+	;lfsr	2, myArray
+	;call	LCD_Write_Message
+	
+	;goto	$
+	
 	
 	; ******* Main programme ****************************************
 start: 	lfsr	0, myArray	; Load FSR0 with address in RAM	
@@ -56,11 +81,27 @@ loop: 	tblrd*+			; one byte from PM to TABLAT, increment TBLPRT
 	call	LCD_Write_Message
 	
 measure_loop:
+	call	LCD_clear
 	call	ADC_Read
 	movf	ADRESH, W, A
+	call	HEXTODEC_input_high
 	call	LCD_Write_Hex
 	movf	ADRESL, W, A
+	call	HEXTODEC_input_low
 	call	LCD_Write_Hex
+	
+	movlw	myTable_l-1	; output message to LCD
+				; don't send the final carriage return to LCD
+	lfsr	2, myArray
+	call	LCD_Write_Message	
+	
+	call	HEXTODEC_convert
+	movf	D_h, W, A
+	call	LCD_Write_Hex
+	movf	D_l, W, A
+	call	LCD_Write_Hex
+	
+	call	LCD_Long_delay
 	goto	measure_loop		; goto current line in code
 	
 	; a delay subroutine if you need one, times around loop in delay_count

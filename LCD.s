@@ -1,6 +1,6 @@
 #include <xc.inc>
 
-global  LCD_Setup, LCD_Write_Message, LCD_Write_Hex
+global  LCD_Setup, LCD_Write_Message, LCD_Write_Hex, LCD_clear, LCD_Long_delay
 
 psect	udata_acs   ; named variables in access ram
 LCD_cnt_l:	ds 1	; reserve 1 byte for variable LCD_cnt_l
@@ -48,7 +48,17 @@ LCD_Setup:
 	movlw	10		; wait 40us
 	call	LCD_delay_x4us
 	return
-
+LCD_clear:
+	movlw	00000001B	; display clear
+	call	LCD_Send_Byte_I
+	movlw	2		; wait 2ms
+	call	LCD_delay_ms
+	movlw	00000110B	; entry mode incr by 1 no shift
+	call	LCD_Send_Byte_I
+	movlw	10		; wait 40us
+	call	LCD_delay_x4us
+	return
+	
 LCD_Write_Hex:			; Writes byte stored in W as hex
 	movwf	LCD_hex_tmp, A
 	swapf	LCD_hex_tmp, W, A	; high nibble first
@@ -123,7 +133,12 @@ LCD_Enable:	    ; pulse enable bit LCD_E for 500ns
 	nop
 	bcf	LATB, LCD_E, A	    ; Writes data to LCD
 	return
-    
+LCD_Long_delay:
+	movlw	250		; wait 2ms
+	call	LCD_delay_ms
+	movlw	250		; wait 2ms
+	call	LCD_delay_ms
+	return
 ; ** a few delay routines below here as LCD timing can be quite critical ****
 LCD_delay_ms:		    ; delay given in ms in W
 	movwf	LCD_cnt_ms, A
